@@ -1,0 +1,11 @@
+[project]
+name = "gps-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.8",
+    "googlemaps>=4.10.0",
+    "modal>=0.73.24",
+]
