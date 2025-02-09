@@ -10,6 +10,7 @@ import uuid
 import requests
 
 VERIFY_TOKEN = None
+TEXTBELT_KEY = None
 gmaps_client = None
 
 class NavigationModes(str, Enum):
@@ -36,19 +37,6 @@ class LocationUpdate(pydantic.BaseModel):
 
 # Store active navigation sessions
 active_navigations = modal.Dict.from_name("active_navigations", create_if_missing=True)
-
-
-def send_message(recipient_id: str, message_text: str):
-    """Sends a message back to the Facebook user"""
-    payload = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": message_text}
-    }
-    headers = {"Content-Type": "application/json"}
-    params = {"access_token": PAGE_ACCESS_TOKEN}
-    response = requests.post(FB_GRAPH_API_URL, json=payload, headers=headers, params=params)
-    if response.status_code != 200:
-        print("Error sending message:", response.text)
 
 
 @web_app.get("/meta_webhook")
@@ -151,18 +139,38 @@ async def update_location(location: LocationUpdate):
         "instruction": current_step["html_instructions"]
     }
 
+@web_app.post("/send_sms")
+async def send_sms(request: Request):
+    data = await request.json()
+    print(data)
+    resp = requests.post('https://textbelt.com/text', {
+        'phone': '+46708624457',
+        'message': data["text"],
+        'key': f'{TEXTBELT_KEY}',
+    })
+    print(resp.json())
+    return JSONResponse(status_code=200, content={"message": "SMS sent"})
+
+@web_app.post("/call_user")
+async def call_user(request: Request):
+    data = await request.json()
+
+    return JSONResponse(status_code=200, content={"message": "Calling user"})
+
 @app.function(
     image=image,
     secrets=[
         modal.Secret.from_name("googlecloud-secret"),
         modal.Secret.from_name("meta-secret"),
+        modal.Secret.from_name("textbelt-secret"),
     ],
     allow_concurrent_inputs=20
     )
 @modal.asgi_app()
 def fastapi_app():
     print("🔹 Starting FastAPI app")
-    global gmaps_client, VERIFY_TOKEN
+    global gmaps_client, VERIFY_TOKEN, TEXTBELT_KEY
     gmaps_client = googlemaps.Client(key=os.environ["MAPS_API_KEY"])
     VERIFY_TOKEN = os.environ["META_VERIFY_TOKEN"]
+    TEXTBELT_KEY = os.environ["TEXTBELT_API_KEY"]
     return web_app

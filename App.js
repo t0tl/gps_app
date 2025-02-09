@@ -3,6 +3,8 @@ import { Text, View, TouchableOpacity, TextInput } from 'react-native';
 import "./global.css"
 import LocationTracker from './LocationTracker';
 import { useState, useEffect } from 'react';
+import * as Linking from 'expo-linking';
+import { Platform } from 'react';
 
 const API_BASE_URL = 'https://t0tl--gps-backend-fastapi-app.modal.run';
 
@@ -13,6 +15,8 @@ export default function App() {
   const [navigationId, setNavigationId] = useState(null);
   const [currentInstruction, setCurrentInstruction] = useState(null);
   const [navigationStatus, setNavigationStatus] = useState(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [message, setMessage] = useState('');
 
   // Start location tracking
   useEffect(() => {
@@ -102,6 +106,21 @@ export default function App() {
     }
   };
 
+  const sendSMS = async () => {
+    try {
+      const url = `sms:${phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(message)}`;
+      const canOpen = await Linking.canOpenURL(url);
+      
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        console.error('Unable to open SMS app');
+      }
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+    }
+  };
+
   return (
     <View className="flex-1 bg-gray-100">
       {/* Header */}
@@ -127,6 +146,32 @@ export default function App() {
             <Text className="text-white font-semibold">
               {navigationId ? 'Navigation in Progress' : 'Start Navigation'}
             </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* SMS Section */}
+        <View className="bg-white rounded-xl p-6 w-full shadow-md mb-4">
+          <Text className="text-lg font-semibold mb-2">Send SMS</Text>
+          <TextInput
+            className="border border-gray-300 rounded-lg p-2 mb-4"
+            placeholder="Enter phone number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+          />
+          <TextInput
+            className="border border-gray-300 rounded-lg p-2 mb-4"
+            placeholder="Enter message"
+            value={message}
+            onChangeText={setMessage}
+            multiline
+          />
+          <TouchableOpacity 
+            className="bg-green-500 p-4 rounded-lg items-center"
+            onPress={sendSMS}
+            disabled={!phoneNumber || !message}
+          >
+            <Text className="text-white font-semibold">Send SMS</Text>
           </TouchableOpacity>
         </View>
 
